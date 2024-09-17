@@ -1,62 +1,73 @@
-﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerController : MonoBehaviour
+/************************************
+Component that takes in player imput and moves the vehicle
+to reciev player imputs and move
+Mathew Srna
+ver 1.0.0
+*************************************/
+
+public class NewBehaviourScript : MonoBehaviour
 {
-    [SerializeField] private float speed = 20.0f;
-    [SerializeField] private float turnSpeed = 30.0f;
-    [SerializeField] private float handbrakeForce = 3000f;
-    [SerializeField] private float dragForce = 0.1f;
-    [SerializeField] private float maxSpeed = 50f;
+    private float speed;     // Holds the forward movement of the vehicle
+    private float turnspeed; // Holds the turn speed of the vehicle
+    private float verticalInput; // Gets a value  [-1, 1] from user key press up/down or W/S
+    private float horizontalinput; // Gets a value  [-1, 1] from user key press left/right or A/D
+    private Rigidbody rb;  // points to vehicle rigidbody component
 
-    private float verticalInput;
-    private float horizontalInput;
-    private bool isHandbrakeActive;
-    private Rigidbody rb;
-
-    private void Start()
-    {
+    // Start is called before the first frame update
+    void Start()
+    {           
+        speed = 20.0f;
+        turnspeed = 30.0f;
         rb = GetComponent<Rigidbody>();
     }
 
-    private void FixedUpdate()
+    // Update is called once per frame
+    void FixedUpdate()
     {
-        // Apply drag force
-        rb.drag = dragForce;
+        rb.AddRelativeForce(Vector3.forward * speed * rb.mass * verticalInput);
+        transform.Rotate(Vector3.up * turnspeed * horizontalinput * Time.deltaTime);
+        Scorekeeper.Instance.AddToScore(verticalInput);
 
-        // Calculate current speed
-        float currentSpeed = rb.velocity.magnitude;
-
-        // Apply forward/backward force
-        if (currentSpeed < maxSpeed)
-        {
-            rb.AddRelativeForce(Vector3.forward * speed * rb.mass * verticalInput);
-        }
-
-        // Apply turning
-        if (rb.velocity.magnitude > 0.1f) // Only turn if moving
-        {
-            float turn = horizontalInput * turnSpeed * Time.fixedDeltaTime;
-            Quaternion turnRotation = Quaternion.Euler(0f, turn, 0f);
-            rb.MoveRotation(rb.rotation * turnRotation);
-        }
-
-        // Apply handbrake
-        if (isHandbrakeActive)
-        {
-            rb.AddForce(-rb.velocity.normalized * handbrakeForce);
-        }
     }
 
+    //Called from PlayerActionInput when user presses WASD or arrow keys
     private void OnMove(InputValue input)
     {
-        Vector2 inputVector = input.Get<Vector2>();
-        verticalInput = inputVector.y;
-        horizontalInput = inputVector.x;
+        verticalInput = input.Get<Vector2>().y;   // Assign ed when player presses W or S
+        horizontalinput = input.Get<Vector2>().x; // Assigned when player presses A or D     
     }
-
-    private void OnHandbrake(InputValue input)
+    public class PlayerController : MonoBehaviour
     {
-        isHandbrakeActive = input.isPressed;
+        // Existing methods like FixedUpdate, Update, etc.
+
+        // Method called when the player collides with another object
+        private void OnCollisionEnter(Collision collision)
+        {
+            // Log the name of the object collided with
+            Debug.Log("Collision detected with: " + collision.gameObject.name);
+
+            // Check if the collided object has the tag "Obstacle"
+            if (collision.gameObject.CompareTag("Obstacle"))
+            {
+                // Log a message to confirm that an obstacle was hit (useful for debugging)
+                Debug.Log("Hit an obstacle!");
+
+                // Call the SubtractFromScore method in the Scorekeeper instance to decrease the score
+                if (Scorekeeper.Instance != null)
+                {
+                    Scorekeeper.Instance.SubtractFromScore();
+                }
+                else
+                {
+                    Debug.LogError("Scorekeeper instance is null!");
+                }
+            }
+        }
     }
 }
+
